@@ -1,9 +1,21 @@
 <?php
 
 /**
- * Finally, a light, permissions-checking logging class.
+ * 
+ * @author Erik Wurzer <erik@pixeloution.com>
+ * @since  April 13, 2011
  *
- * Originally written for use with wpSearch
+ * Modified for use with CodeIgniter, and CI config files
+ *
+ * Modified the library to allow the user to specify the log filename,
+ * and if files are dated, and dated by what period (ie. monthly logfiles,
+ * daily logfiles )
+ *
+ *
+ *
+ *
+ *
+ *
  *
  * Usage:
  * $log = new KLogger('/var/log/', KLogger::INFO );
@@ -110,6 +122,16 @@ class KLogger
      * @var array
      */
     private static $instances           = array();
+    /**
+     * default filename for a log
+     * @var string
+     */
+    private static $_defaultFilename    = 'KLog.txt';
+    /**
+     * prepended datetime format, used to create complete filename of a log
+     * ex. 05-01-2011-KLog.txt
+     */
+    private static $_filePrepend        = 'Y-m-';
 
     /**
      * Partially implements the Singleton pattern. Each $logDirectory gets one
@@ -145,24 +167,20 @@ class KLogger
     /**
      * Class constructor
      *
-     * @param string  $logDirectory File path to the logging directory
+     * @param string  $logpath      File path to the logging directory, optionally include file name
      * @param integer $severity     One of the pre-defined severity constants
      * @return void
      */
-    public function __construct($logDirectory, $severity)
+    public function __construct($logpath, $severity)
     {
-        $logDirectory = rtrim($logDirectory, '\\/');
-
         if ($severity === self::OFF) {
             return;
         }
 
-        $this->_logFilePath = $logDirectory
-            . DIRECTORY_SEPARATOR
-            . 'log_'
-            . date('Y-m-d')
-            . '.txt';
+        
+        $this->_logFilePath = $this->_create_path($logpath);
 
+   
         $this->_severityThreshold = $severity;
         if (!file_exists($logDirectory)) {
             mkdir($logDirectory, self::$_defaultPermissions, true);
@@ -391,5 +409,33 @@ class KLogger
             default:
                 return "$time - LOG -->";
         }
+    }
+
+    /**
+     * takes user input and creats the full filepath for the logfile; any string
+     * not ending in a slash is assumed to be a proper filename, ending in a
+     * slash is assumed to be directory only. A file extention is not required
+     *
+     * @param string $logpath
+     * a directory or full path to a file
+     *
+     * @return string
+     * full file path
+     */
+    private function _create_path($logpath)
+    {
+        $logpath = trim($logpath);
+        $file    = date(self::$_filePrepend);
+
+        if(preg_match('~[/\\]$~', $logpath)) {
+            $path  = $logpath;
+            $file .= self::$_defaultFilename;
+        } else {
+            $info  = pathinfo($logpath);
+            $path  = $info['dirname'];
+            $file .= $info['basename'];
+        }
+
+        return $path . DIRECTORY_SEPARATOR . $file;
     }
 }
